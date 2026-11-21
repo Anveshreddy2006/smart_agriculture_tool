@@ -1,0 +1,223 @@
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+
+export default function NavBar() {
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/");
+  };
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [isLgFont, setIsLgFont] = useState(false);
+  const [translateLoaded, setTranslateLoaded] = useState(false);
+
+  useEffect(() => {
+    if (isLgFont) document.body.classList.add("lg-font");
+    else document.body.classList.remove("lg-font");
+  }, [isLgFont]);
+
+  useEffect(() => {
+    if (!showSettings || translateLoaded || typeof window === "undefined")
+      return;
+
+    window.googleTranslateElementInit = () => {
+      if (
+        !window.google ||
+        !window.google.translate ||
+        !document.getElementById("google_translate_element")
+      ) {
+        return;
+      }
+
+      new window.google.translate.TranslateElement(
+        {
+          pageLanguage: "en",
+          includedLanguages: "hi,te,en",
+          layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
+        },
+        "google_translate_element",
+      );
+    };
+
+    const existingScript = document.querySelector(
+      'script[data-google-translate="true"]',
+    );
+    if (existingScript) {
+      setTranslateLoaded(true);
+      if (window.google && window.google.translate) {
+        window.googleTranslateElementInit();
+      }
+      return;
+    }
+
+    const addScript = document.createElement("script");
+    addScript.dataset.googleTranslate = "true";
+    addScript.async = true;
+    addScript.src =
+      "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+    addScript.onload = () => setTranslateLoaded(true);
+    document.body.appendChild(addScript);
+  }, [showSettings, translateLoaded]);
+
+  if (!user) return null; // Don't show nav if not logged in
+
+  return (
+    <nav
+      className="glass-panel"
+      style={{
+        display: "flex",
+        gap: "20px",
+        padding: "15px 30px",
+        margin: "20px",
+        borderRadius: "15px",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+        <h3 style={{ margin: 0, color: "var(--accent-color)" }}>
+          🌱 HarvestMate
+        </h3>
+
+        {(user.role === "farmer" || user.role === "farmer_expert") && (
+          <div
+            style={{
+              display: "flex",
+              gap: "15px",
+              marginLeft: "20px",
+              alignItems: "center",
+            }}
+          >
+            <Link to="/ai-assistant">Smart Advisor</Link>
+            <Link to="/community">Community</Link>
+            <Link to="/experts">Find Expert</Link>
+            <Link to="/market">Market</Link>
+            <Link to="/profile">Profile</Link>
+            {user.role === "farmer" &&
+              user.originalRole !== "farmer_expert" && (
+                <Link
+                  to="/apply-expert"
+                  style={{
+                    padding: "4px 10px",
+                    background: "var(--bg-secondary)",
+                    borderRadius: "6px",
+                    fontSize: "0.9em",
+                  }}
+                >
+                  ⭐ Apply as Expert
+                </Link>
+              )}
+          </div>
+        )}
+
+        {(user.role === "expert" || user.role === "farmer_expert") && (
+          <div
+            style={{
+              display: "flex",
+              gap: "15px",
+              marginLeft: "20px",
+              borderLeft:
+                user.role === "farmer_expert"
+                  ? "2px solid var(--glass-border)"
+                  : "none",
+              paddingLeft: user.role === "farmer_expert" ? "20px" : "0",
+            }}
+          >
+            <Link to="/expert-dashboard">Expert Portal</Link>
+            <Link to="/community">Community</Link>
+            <Link to="/expert-profile">Expert Profile</Link>
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "15px",
+          alignItems: "center",
+          position: "relative",
+        }}
+      >
+        <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>
+          👤 {user.name}
+        </span>
+
+        <button
+          onClick={() => setShowSettings((current) => !current)}
+          style={{
+            padding: "8px 12px",
+            background: "rgba(255,255,255,0.1)",
+            color: "var(--text-primary)",
+          }}
+        >
+          ⚙️
+        </button>
+
+        <div
+          className="glass-panel"
+          style={{
+            position: "absolute",
+            top: "50px",
+            right: "0",
+            padding: "15px",
+            zIndex: 99999,
+            minWidth: "200px",
+            display: showSettings ? "flex" : "none",
+            flexDirection: "column",
+            gap: "12px",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+          }}
+        >
+          <h4
+            style={{
+              margin: "0 0 5px 0",
+              color: "var(--emerald-primary)",
+              fontSize: "1rem",
+            }}
+          >
+            Accessibility
+          </h4>
+
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              cursor: "pointer",
+              color: "var(--text-primary)",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={isLgFont}
+              onChange={(e) => setIsLgFont(e.target.checked)}
+            />
+            Large Font
+          </label>
+
+          <h4
+            style={{
+              margin: "10px 0 5px 0",
+              color: "var(--emerald-primary)",
+              fontSize: "1rem",
+            }}
+          >
+            Live Translation
+          </h4>
+          <div id="google_translate_element"></div>
+        </div>
+
+        <button
+          onClick={handleLogout}
+          className="danger"
+          style={{ padding: "8px 16px" }}
+        >
+          Logout
+        </button>
+      </div>
+    </nav>
+  );
+}
